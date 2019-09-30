@@ -44,51 +44,85 @@
 #define RIGHT_MOTOR 4
 
 
-
-#define INPUT_(size)             (0x80 | size)
-
+#if 1
 const uint8_t reportMapJoystick[] = { //This is where the amount, type, and value range of the inputs are declared
-  USAGE_PAGE(1), 			      0x01,   // USAGE_PAGE (Generic Desktop)
-  USAGE(1),                 0x05,   // USAGE (Gamepad)
-  COLLECTION(1),            0x01,   // COLLECTION (Application)
-  REPORT_ID(1),             0x01,   // REPORT_ID (1)
-  
-  LOGICAL_MINIMUM(1),       0x00,   // LOGICAL_MINIMUM (0)
-  LOGICAL_MAXIMUM(1),       0x01,   // LOGICAL_MAXIMUM (1)
-  PHYSICAL_MINIMUM(1),      0x00,   // PHYSICAL_MINIMUM (0)
-  PHYSICAL_MAXIMUM(1),      0x01,   // PHYSICAL_MAXIMUM (1)
-  REPORT_SIZE(1),	  	      0x01,   // REPORT_SIZE (1)
-  REPORT_COUNT(1),          0x10,   // REPORT_COUNT (16)
-  USAGE_PAGE(1),            0x09,   //(Button)
-      USAGE_MINIMUM(1),     0x01,
-      USAGE_MAXIMUM(1),     0x10,   // 16
-      INPUT_(1),            0x02,   // variable | absolute
+  USAGE_PAGE(1), 			        0x01,   // USAGE_PAGE (Generic Desktop)
+  USAGE(1),                   0x05,   // USAGE (Gamepad)
+  COLLECTION(1),              0x01,   // COLLECTION (Application)
+  // USAGE(1), 0x01,     //(point)
+    COLLECTION(1),            0x00,   // COLLECTION (Physical)
+      REPORT_ID(1),           0x01,   // REPORT_ID (1)
 
-  LOGICAL_MAXIMUM(2),   0xff, 0x00, // LOGICAL_MAXIMUM (255)
-  PHYSICAL_MAXIMUM(2),  0xff, 0x00, // PHYSICAL_MAXIMUM (255)
-  REPORT_SIZE(1),           0x08,   // REPORT_SIZE (8)
-  REPORT_COUNT(1),          0x04,   // REPORT_COUNT (1)
-  USAGE_PAGE(1),            0x01,   // USAGE_PAGE (Generic Desktop)
-      USAGE(1), 				    0x30,   // X axis
-      USAGE(1), 			      0x31,   // Y axis
-      USAGE(1), 				    0x32,   // Z axis
-      USAGE(1), 				    0x35,   // Z-rotator axis
-      INPUT_(1),            0x02,   // INPUT (Data,Var,Abs)
+      USAGE_PAGE(1),          0x09,   //(Button)
+        USAGE_MINIMUM(1),     0x01,
+        USAGE_MAXIMUM(1),     0x0c,   // 16
+        LOGICAL_MINIMUM(1),   0x00,   // LOGICAL_MINIMUM (0)
+        LOGICAL_MAXIMUM(1),   0x01,   // LOGICAL_MAXIMUM (1)
+        REPORT_SIZE(1),	  	  0x01,   // REPORT_SIZE (1)
+        REPORT_COUNT(1),      0x0c,   // REPORT_COUNT (16)
+        HIDINPUT(1),            0x02,   // variable | absolute
 
-  LOGICAL_MINIMUM(1),       0x00,
-  LOGICAL_MAXIMUM(1),       0x07,
-  PHYSICAL_MINIMUM(1),      0x01,
-  PHYSICAL_MAXIMUM(2),      (315 & 0xFF), ((315>>8) & 0xFF),
-  REPORT_SIZE(1),	  	      0x04,
-  REPORT_COUNT(1),	        0x01,
-  UNIT(1),                  20,
-  USAGE_PAGE(1), 			      0x01,
-      USAGE(1), 				    0x39,  //hat switch
-      INPUT_(1),            0x42,  //variable | absolute | null state
+        REPORT_SIZE(1),	  	  0x01,   // REPORT_SIZE (1)
+        REPORT_COUNT(1),      0x04,   // REPORT_COUNT (16)
+        HIDINPUT(1),            0x03,   // variable | absolute
 
+      USAGE_PAGE(1),          0x01,   // USAGE_PAGE (Generic Desktop)
+        USAGE(1), 				    0x30,   // X axis
+        USAGE(1), 			      0x31,   // Y axis
+        USAGE(1), 				    0x32,   // Z axis
+        USAGE(1), 				    0x35,   // Z-rotator axis
+        LOGICAL_MINIMUM(1),   0x00,   // LOGICAL_MINIMUM (0)
+        LOGICAL_MAXIMUM(2),   0xff, 0x00,  // LOGICAL_MAXIMUM (255)
+        REPORT_SIZE(1),       0x08,   // REPORT_SIZE (8)
+        REPORT_COUNT(1),      0x04,   // REPORT_COUNT (1)
+        HIDINPUT(1),          0x02,   // INPUT (Data,Var,Abs)
+
+      USAGE_PAGE(1), 			    0x01,
+        USAGE(1), 				    0x39,  //hat switch
+        LOGICAL_MINIMUM(1),   0x01,
+        LOGICAL_MAXIMUM(1),   0x08,
+        REPORT_SIZE(1),	  	  0x04,
+        REPORT_COUNT(1),	    1,//0x01,
+        HIDINPUT(1),            0x02, //0x42,  //variable | absolute | null state
+
+        REPORT_SIZE(1),	  	  0x04,
+        REPORT_COUNT(1),	    0x01,//0x01,
+        HIDINPUT(1),            0x03,
+
+    END_COLLECTION(0),         // END_COLLECTION
   END_COLLECTION(0)         // END_COLLECTION
 };
 
+#else
+
+  const uint8_t reportMapJoystick[] = { //This is where the amount, type, and value range of the inputs are declared
+    0x05, 0x01, // USAGE_PAGE (Generic Desktop)
+    0x09, 0x05, // USAGE (Gamepad)
+    0xa1, 0x01, // COLLECTION (Application)
+    0x85, 0x01, //   REPORT_ID (1)
+    0x15, 0x00, // LOGICAL_MINIMUM (0)
+    0x25, 0x01, // LOGICAL_MAXIMUM (1)
+    0x35, 0x00, // PHYSICAL_MINIMUM (0)
+    0x45, 0x01, // PHYSICAL_MAXIMUM (1)
+    0x75, 0x01, // REPORT_SIZE (1)
+    0x95, 0x10, // REPORT_COUNT (16)
+    0x05, 0x09, // USAGE_PAGE (Button)
+    0x19, 0x01, // USAGE_MINIMUM (Button 1)
+    0x29, 0x10, // USAGE_MAXIMUM (Button 16)
+    0x81, 0x02, // INPUT (Data,Var,Abs)
+    0x05, 0x01, // USAGE_PAGE (Generic Desktop)
+    0x26, 0xff, 0x00, // LOGICAL_MAXIMUM (255)
+    0x46, 0xff, 0x00, // PHYSICAL_MAXIMUM (255)
+    0x09, 0x30, // USAGE (Y)
+    0x09, 0x31, // USAGE (Y)
+    0x09, 0x32, // USAGE (Y)
+    0x09, 0x35, // USAGE (Y)
+    0x75, 0x08, // REPORT_SIZE (8)
+    0x95, 0x04, // REPORT_COUNT (1)
+    0x81, 0x02, // INPUT (Data,Var,Abs)
+    0xc0 // END_COLLECTION
+  };
+#endif
 
 /** @brief One command (report) to be issued via BLE joystick profile
  * @see joystick_q */
@@ -109,4 +143,7 @@ typedef struct joystick_command {
   uint16_t sliderRight;
   /** @brief Hat position (0-360), mapped to 8 directions. Use <0 for no pressing*/
   int16_t hat;
+
+  uint8_t vr_left;
+  uint8_t vr_right;
 } joystick_command_t;
