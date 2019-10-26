@@ -34,6 +34,8 @@ bool mode = false;
 //pin that goes high while there's a device connected
 #define CONNECTED_LED_INDICATOR_PIN 15
 
+void batteryTask(void);
+
 ledc_channel_config_t* led_channel_1 = 0;
 float led_duty_1 = 0;
 
@@ -111,13 +113,13 @@ class MyCallbacks : public BLEServerCallbacks { //Class that does stuff when dev
     }
 };
 
-class MyOutputCallbacks : public BLECharacteristicCallbacks {
-    void onWrite(BLECharacteristic* me) {
-      uint8_t* value = (uint8_t*)(me->getValue().c_str());
-      ESP_LOGD(LOG_TAG, "special keys: %d", *value);
-      // Serial.printf("special keys: %s", *value);
-    }
-};
+// class MyOutputCallbacks : public BLECharacteristicCallbacks {
+//     void onWrite(BLECharacteristic* me) {
+//       uint8_t* value = (uint8_t*)(me->getValue().c_str());
+//       ESP_LOGD(LOG_TAG, "special keys: %d", *value);
+//       // Serial.printf("special keys: %s", *value);
+//     }
+// };
 
 uint32_t passKey = 1307;
 /** @brief security callback
@@ -176,21 +178,24 @@ void taskServer(void*) {
 	// BLEDevice::setEncryptionLevel(ESP_BLE_SEC_ENCRYPT_NO_MITM);
   BLEDevice::setSecurityCallbacks(new CB_Security());
 
+  // BLEDevice::setPower(ESP_PWR_LVL_P7);
+
   hid = new BLEHIDDevice(pServer);
   input = hid->inputReport(1); // <-- input REPORTID from report map
   output = hid->outputReport(1); // <-- output REPORTID from report map
 
-  output->setCallbacks(new MyOutputCallbacks());
+  //output->setCallbacks(new MyOutputCallbacks());
 
-  std::string name = "LEON";
+  std::string name = "kkaoo";
   hid->manufacturer()->setValue(name);
 
-  hid->pnp(0x02, 0xe502, 0xa111, 0x0210);
-  hid->hidInfo(0x00, 0x02);
+  // hid->pnp(0x01, 0xe502, 0xa0b1, 0x0102);
+  hid->pnp(0x02, 0x0801, 0xe501, 0x0102);
+  hid->hidInfo(0x00, 0x01);
 
-  BLESecurity *pSecurity = new BLESecurity();
-  //  pSecurity->setKeySize();
-  pSecurity->setAuthenticationMode(ESP_LE_AUTH_BOND);
+  // BLESecurity *pSecurity = new BLESecurity();
+  // //  pSecurity->setKeySize();
+  // pSecurity->setAuthenticationMode(ESP_LE_AUTH_BOND);
 
   hid->reportMap((uint8_t*)reportMapJoystick, sizeof(reportMapJoystick));
   // hid->reportMap((uint8_t*)reportMapJoystick, sizeof(reportMapJoystick));
@@ -198,9 +203,14 @@ void taskServer(void*) {
 
   BLEAdvertising *pAdvertising = pServer->getAdvertising();
   pAdvertising->setAppearance(HID_GAMEPAD);
+  pAdvertising->setMaxInterval(300);
   pAdvertising->addServiceUUID(hid->hidService()->getUUID());
   pAdvertising->start();
   hid->setBatteryLevel(50);
+
+  BLESecurity *pSecurity = new BLESecurity();
+  //  pSecurity->setKeySize();
+  pSecurity->setAuthenticationMode(ESP_LE_AUTH_BOND);
 
   ESP_LOGD(LOG_TAG, "Advertising started!");
 
@@ -249,8 +259,8 @@ class SingleKey{
 };
 
 /* enum定义 和 const定义 排序要对称 */
-enum{               INX_UP=0, INX_RIGHT, INX_DOWN, INX_LEFT, INX_Y, INX_B, INX_A, INX_X, INX_L, INX_R, INX_LT, INX_RT, INX_SELECT, INX_START, INX_TURBO3, INX_TURBO2, INX_MODE, INX_TURBO, INX_AUTO };
-const uint8_t KEYS[]={KEY_UP, KEY_RIGHT, KEY_DOWN, KEY_LEFT, KEY_Y, KEY_B, KEY_A, KEY_X, KEY_L, KEY_R, KEY_LT, KEY_RT, KEY_SELECT, KEY_START, KEY_TURBO3, KEY_TURBO2, KEY_MODE, KEY_TURBO, KEY_AUTO };
+enum{               INX_UP=0, INX_RIGHT, INX_DOWN, INX_LEFT, INX_Y, INX_B, INX_A, INX_X, INX_L, INX_R, INX_LT, INX_RT, INX_START, INX_SELECT, INX_TURBO3, INX_TURBO2, INX_TURBO, INX_AUTO };
+const uint8_t KEYS[]={KEY_UP, KEY_RIGHT, KEY_DOWN, KEY_LEFT, KEY_Y, KEY_B, KEY_A, KEY_X, KEY_L, KEY_R, KEY_LT, KEY_RT, KEY_START, KEY_SELECT, KEY_TURBO3, KEY_TURBO2, KEY_TURBO, KEY_AUTO };
 static joystick_command_t jcmd;
 
 // uint16_t value_limit(uint16_t value){
@@ -295,6 +305,7 @@ void joystickTask(void*) {
       }
     }
 
+    // 按键上拉下拉翻转
     if(current_mode == INPUT_PULLUP){
       current_mode = INPUT_PULLDOWN;
     }else{
@@ -304,16 +315,17 @@ void joystickTask(void*) {
     pinMode(KEY_AUTO, current_mode);
     pinMode(KEY_TURBO3, current_mode);
 
-    // 扫描VR并简易滤波
+    // 扫描VR
+    // 数据被相4次后进行平均值滤波并存储在VR[]
     static uint32_t total[4];
     static uint16_t VR[4];
     static int total_cycle = 0;
     static uint8_t vr_left_status = 0;
     static uint8_t vr_right_status = 0;
-    total[0]+=(4095-analogRead(LEFT_VR2));
-    total[1]+=(4095-analogRead(LEFT_VR1));
-    total[2]+=(4095-analogRead(RIGHT_VR2));
-    total[3]+=(4095-analogRead(RIGHT_VR1));
+    total[0]+=(analogRead(LEFT_VR2));
+    total[1]+=(analogRead(LEFT_VR1));
+    total[2]+=(analogRead(RIGHT_VR2));
+    total[3]+=(analogRead(RIGHT_VR1));
     if((++total_cycle) >= 4){
       for(int i=0; i<4; i++){
         VR[i] = total[i]/total_cycle/16;
@@ -332,11 +344,19 @@ void joystickTask(void*) {
       if(VR[2]>=160) vr_right_status|=0x02;
     }    
 
-      //模式按钮，进行模式切换
-      if(m_keys[INX_MODE]->trigger){
-        m_keys[INX_MODE]->trigger = 0;
+      //检测模式按钮，有效时则进行模式切换
+      if(m_keys[INX_TURBO]->trigger){
+        m_keys[INX_TURBO]->trigger = 0;
         mode = !mode;
+        Serial.println("Key TURBO: " + String(mode));
       }
+
+      if(m_keys[INX_AUTO]->trigger){
+        m_keys[INX_AUTO]->trigger = 0;
+        mode = !mode;
+        Serial.println("Key AUTO: " + String(mode));
+      }
+
 
       //按键分析 
       uint32_t mask=0;      //记录bit单位的按键状态
@@ -344,7 +364,7 @@ void joystickTask(void*) {
 
       for(int i=0; i<4; i++)
         hat|=(m_keys[i]->status<<i);
-      for(int i=4; i<INX_MODE; i++)
+      for(int i=4; i<16; i++)
         mask|=(m_keys[i]->status<<(i-4));
       const uint8_t HAT[] = {0,1,3,2, 5,0,4,0, 7,8,0,0, 6,0,0,0};
 
@@ -359,7 +379,7 @@ void joystickTask(void*) {
 
       //如果连接状态，那么可以发送数据，发送有二种机制
       //1 如果有按键按下立即发送
-      //2 如果摇感有摇动，发送持续发送10S, 间隔50MS 
+      //2 如果摇感有摇动，发送持续发送10S, 间隔60MS 
       //    持续发送在映射模式不起作用，因为映射模式没有摇杆数据，不需要进行持续更新
       static int cmd_send_count_down = 0;
       static int cmd_send_delay = 0;
@@ -379,24 +399,25 @@ void joystickTask(void*) {
         if(cmd_send_count_down) cmd_send_count_down--;
 
         if(cmd_send_delay==0){
-          cmd_send_delay = 50 / GAMEPAD_TICK_MS;
+          cmd_send_delay = 60 / GAMEPAD_TICK_MS;
           jcmd.buttonmask = mask;
           jcmd.hat = hat;
           jcmd.vr_left = vr_left_status;
           jcmd.vr_right = vr_right_status;
 
           uint8_t a[] = {0,0,0,0,0,0,0};
-          a[0] = jcmd.buttonmask & 0xff;
-          a[1] = (jcmd.buttonmask>>8) & 0xff;
+          a[5] = jcmd.buttonmask & 0xff;
+          a[6] = (jcmd.buttonmask>>8) & 0xff;
           
-          a[2] = (jcmd.Xaxis) & 0xff;
-          a[3] = (jcmd.Yaxis) & 0xff;
-          a[4] = (jcmd.Zaxis) & 0xff;
-          a[5] = (jcmd.Zrotate) & 0xff;
+          a[0] = (jcmd.Xaxis) & 0xff;
+          a[1] = (jcmd.Yaxis) & 0xff;
+          a[2] = (jcmd.Zrotate) & 0xff;
+          a[3] = (jcmd.Zaxis) & 0xff;
 
-          a[6] = jcmd.hat & 0xff;
+          a[4] = jcmd.hat==0?8:jcmd.hat-1;   //0,1-8  ->  8,0-7
 
-          input->setValue(a, sizeof(a));
+          // input->setValue(a, sizeof(a));
+          input->setValue(a, 7);
           input->notify();
           // Serial.printf("%2x  %2x  %2x  %2x  %2x  %2x  %2x  %2x  %2x\n",a[0],a[1],a[2],a[3],a[4],a[5],a[6],vr_left_status,vr_right_status);
         } 
@@ -404,19 +425,39 @@ void joystickTask(void*) {
   }
 }
 
-void my_test(void*) {
+float battery_volt = 0;
+void batteryTask(void){
+  static uint32_t volt = 0;
+  static int cycle = 0;
+  volt += analogRead(BATTERY_VOLT);
+  volt += analogRead(BATTERY_VOLT);
+  cycle++;
+  if(cycle >= 32){
+    battery_volt = volt/cycle*3.3/4096;
+    cycle = 0;
+    volt = 0;
+    // Serial.println("Battery Volt : " + String(battery_volt));
+
+    if(connected){
+      hid->setBatteryLevel((battery_volt-3.2)*100);
+    }
+  }
+}
+
+void my_gpio_test(void) {
+
   for(int i=0; i<sizeof(KEYS); i++)
     pinMode(KEYS[i], INPUT_PULLUP);
 
-  digitalWrite(LEFT_MOTOR, HIGH);
-  delay(2000);
-  digitalWrite(LEFT_MOTOR, LOW);
-  delay(1000);
+  // digitalWrite(LEFT_MOTOR, HIGH);
+  // delay(2000);
+  // digitalWrite(LEFT_MOTOR, LOW);
+  // delay(1000);
 
-  digitalWrite(RIGHT_MOTOR, HIGH);
-  delay(2000);
-  digitalWrite(RIGHT_MOTOR, LOW);
-  delay(1000);
+  // digitalWrite(RIGHT_MOTOR, HIGH);
+  // delay(2000);
+  // digitalWrite(RIGHT_MOTOR, LOW);
+  // delay(1000);
 
   while(1)
   {
@@ -450,24 +491,29 @@ void setup() {
 
   bootCount++; //累加计数值
   Serial.printf("这是第 %d 次复位n", bootCount);
-  switch(esp_sleep_get_wakeup_cause()) //获取唤醒原因
+
+  esp_sleep_wakeup_cause_t wakeup_reason;
+  wakeup_reason = esp_sleep_get_wakeup_cause();
+  switch(wakeup_reason)
   {
-    case ESP_SLEEP_WAKEUP_TIMER : Serial.println("通过定时器唤醒"); break;
-    case ESP_SLEEP_WAKEUP_TOUCHPAD : Serial.println("通过触摸唤醒"); break;
-    case ESP_SLEEP_WAKEUP_EXT0 : Serial.println("通过EXT0唤醒"); break;
-    case ESP_SLEEP_WAKEUP_EXT1 : Serial.println("通过EXT1唤醒"); break;
-    case ESP_SLEEP_WAKEUP_ULP : Serial.println("通过ULP唤醒"); break;
-    default : Serial.println("并非从DeepSleep中唤醒"); break;
+    case ESP_SLEEP_WAKEUP_EXT0 : Serial.println("Wakeup caused by external signal using RTC_IO"); break;
+    case ESP_SLEEP_WAKEUP_EXT1 : Serial.println("Wakeup caused by external signal using RTC_CNTL"); break;
+    case ESP_SLEEP_WAKEUP_TIMER : Serial.println("Wakeup caused by timer"); break;
+    case ESP_SLEEP_WAKEUP_TOUCHPAD : Serial.println("Wakeup caused by touchpad"); break;
+    case ESP_SLEEP_WAKEUP_ULP : Serial.println("Wakeup caused by ULP program"); break;
+    default : Serial.printf("Wakeup was not caused by deep sleep: %d\n",wakeup_reason); break;
   }
 
   pinMode(LEFT_MOTOR, OUTPUT);
-  pinMode(RIGHT_MOTOR, OUTPUT);
-  digitalWrite(RIGHT_MOTOR, HIGH);
+  digitalWrite(LEFT_MOTOR, LOW);
+  pinMode(VR_PWR, OUTPUT);
+  pinMode(CONNECTED_LED_INDICATOR_PIN, OUTPUT);
+  digitalWrite(VR_PWR, LOW);
 
   led_init();
 
-  // xTaskCreate(my_test, "my_test", 2048, NULL, 1, NULL);
-  xTaskCreate(joystickTask, "joystick", 20000, NULL, 1, NULL);
+  // xTaskCreate(my_test, "my_gpio_test", 2048, NULL, 1, NULL);
+  xTaskCreate(joystickTask, "joystick", 20000, NULL, 2, NULL);
   xTaskCreate(taskServer, "server", 20000, NULL, 5, NULL);
 
   sleep_clear();
@@ -499,17 +545,27 @@ void loop() {
   }
 
   sleep_count ++;
-  if(sleep_count >= (300*1000/100)){
+  int sleep_timeout = (bootCount==1)?5:300;     //首次上电5秒后sleep, 其它时300秒 
+
+  if(sleep_count >= (sleep_timeout*1000/100)){
     sleep_count = 0;
     Serial.printf("Enabling EXT0 wakeup on pins GPIO%d\n", KEY_LEFT);
-    Serial.flush();
 
-    delay(50);
-    esp_sleep_enable_ext1_wakeup(uint64_t((uint64_t)1<<KEY_LEFT), ESP_EXT1_WAKEUP_ALL_LOW);
-    delay(50);
-    esp_deep_sleep_start(); //启动DeepSleep
+    pinMode(KEY_LEFT, INPUT_PULLUP);
+    esp_sleep_enable_ext0_wakeup(gpio_num_t(KEY_LEFT), 0); //1 = High, 0 = Low
+
+    //If you were to use ext1, you would use it like
+    // esp_sleep_enable_ext1_wakeup(uint64_t((uint64_t)1<<KEY_LEFT), ESP_EXT1_WAKEUP_ALL_LOW);
+
+    //Go to sleep now
+    Serial.println("Going to sleep now");
+    Serial.flush(); 
+    esp_deep_sleep_start();
+    Serial.println("This will never be printed");
   }
 
+
+  batteryTask();
   // Serial.println(sleep_count);
   // Serial.println(jcmd.Xaxis);
 }

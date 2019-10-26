@@ -1,6 +1,10 @@
 # ESP32-HID
 
-### 线路图
+### 待解决问题
+    已知问题----》 GPIO0不能PULL DOWN
+    已知问题----》 蓝牙连接不太稳定，会掉线，可能和REPORT表有关. 树莓派常常不能正常工作。
+
+### 线路图 V2
 ![Alt text](/doc/ESP32_HID_sch_v2.jpg)
 
 原模组CH340串口IC静态电流1.6MA，如下图中：
@@ -10,7 +14,7 @@
 
 ![Alt text](/doc/module_fly_wire.jpeg)
 
-### 实物图
+### 实物图 V2
 挑掉牛屎IC后飞线
 ![Alt text](/doc/gamepad1.jpg)
 连接ESP32模组
@@ -19,6 +23,12 @@
 ![Alt text](/doc/gamepad3.jpeg)
 装好上盖后的成品图
 ![Alt text](/doc/gamepad4.jpeg)
+
+### 线路图 & PCB V3
+![Alt text](/doc/schpcb_v3/v3a_sch.png)
+![Alt text](/doc/schpcb_v3/v3_PCB.png)
+![Alt text](/doc/schpcb_v3/v3_PCB_3D_F.jpg)
+![Alt text](/doc/schpcb_v3/v3_PCB_3D_B.jpg)
 
 ### 系统兼容
     测试WIN10 64位: 正常
